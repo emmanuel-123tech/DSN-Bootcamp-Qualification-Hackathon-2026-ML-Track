@@ -13,6 +13,7 @@ This repository documents my approach to predicting `total_sales` for a product 
 | [`train.csv`](train.csv) | 6,818 product-store records with `total_sales`. |
 | [`test.csv`](test.csv) | 1,705 product-store records without `total_sales`. |
 | [`1st_place_solution_DSN_Bootcamp_Qualification_Hackathon_2026_ML_Track.ipynb`](1st_place_solution_DSN_Bootcamp_Qualification_Hackathon_2026_ML_Track.ipynb) | The full analysis, code, outputs, and submission workflow. |
+| [`DSN_Mart_Row_Consensus_Alternative.ipynb`](DSN_Mart_Row_Consensus_Alternative.ipynb) | Alternative direct reconstruction using row assignments and product consensus. |
 
 The notebook also uses the original Big Mart training data. It reads a local `original_bigmart.csv` if available, recognizes the upload filename `train (14)(2).csv`, or downloads the [source CSV](https://raw.githubusercontent.com/hannarud/r-plotting/master/Train_UWu5bXk.csv). Keep the original source row order because the sales-factor calculation is indexed by row position.
 
@@ -80,6 +81,10 @@ The signal already contains sales recovered from the original labeled Big Mart f
 ## 9. Predict and submit
 
 The notebook predicts the **1,705** test rows and writes `ebiendele_submission_dsn.csv` in the test file's original order. The submission has exactly two columns: `id,total_sales`. The code checks row count, ID order, uniqueness, and missing predictions before saving.
+
+## Alternative row-consensus approach
+
+The [second notebook](DSN_Mart_Row_Consensus_Alternative.ipynb) matches DSN rows to original Big Mart rows within **160 outlet-category groups**, then uses repeated product appearances to correct **33** ambiguous row assignments. It reconstructs sales directly without regression. In the recorded run, it matches **6,818/6,818** training targets with **0.0000000000 RMSE** and generates **1,705** test predictions. It still relies on the original labeled Big Mart data and the same seeded transformation.
 
 ## Run it yourself
 
