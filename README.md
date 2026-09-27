@@ -12,7 +12,7 @@ This repository documents my approach to predicting `total_sales` for a product 
 | --- | --- |
 | [`train.csv`](train.csv) | 6,818 product-store records with `total_sales`. |
 | [`test.csv`](test.csv) | 1,705 product-store records without `total_sales`. |
-| [`1st_place_solution_DSN_Bootcamp_Qualification_Hackathon_2026_ML_Track.ipynb`](1st_place_solution_DSN_Bootcamp_Qualification_Hackathon_2026_ML_Track.ipynb) | The full analysis, code, outputs, and submission workflow. |
+| [`_Ebiendele_Emmanuel_DSN_Bootcamp_Qualification_Hackathon_2026_MLTrack.ipynb`](_Ebiendele_Emmanuel_DSN_Bootcamp_Qualification_Hackathon_2026_MLTrack.ipynb) | The full analysis, code, outputs, and submission workflow. |
 
 The notebook also uses the original Big Mart training data. It reads a local `original_bigmart.csv` if available, recognizes the upload filename `train (14)(2).csv`, or downloads the [source CSV](https://raw.githubusercontent.com/hannarud/r-plotting/master/Train_UWu5bXk.csv). Keep the original source row order because the sales-factor calculation is indexed by row position.
 
