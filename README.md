@@ -1,140 +1,93 @@
-# DSN Bootcamp Qualification Hackathon 2026
+# DSN Bootcamp Qualification Hackathon 2026 · ML Track
 
-### ML Track · DSN Mart Sales Prediction · 1st-place solution
+## DSN Mart Sales Prediction | 1st-place solution
 
-[![Competition](https://img.shields.io/badge/Kaggle-Competition-20BEFF?logo=kaggle&logoColor=white)](https://www.kaggle.com/competitions/dsn-bootcamp-qualification-hackathon-2026-ml-track/overview)
-![Python](https://img.shields.io/badge/Python-Notebook-3776AB?logo=python&logoColor=white)
-![Jupyter](https://img.shields.io/badge/Jupyter-Analysis-F37626?logo=jupyter&logoColor=white)
-![Metric](https://img.shields.io/badge/Metric-RMSE-475569)
+**Emmanuel Ebiendele** · [Competition leaderboard](https://www.kaggle.com/competitions/dsn-bootcamp-qualification-hackathon-2026-ml-track/leaderboard) · Evaluation metric: **RMSE**
 
-**By [Emmanuel Ebiendele](https://github.com/emmanuel-123tech)**
-
-Predict the total sales of a product at a DSN Mart store. This repository contains the competition data and my documented solution notebook, from data exploration through a 1,705-row submission. The final method links anonymized DSN product-store records to the original Big Mart dataset and recreates the sales signal before fitting a one-feature linear regression.
-
-[**Open the solution notebook →**](1st_place_solution_DSN_Bootcamp_Qualification_Hackathon_2026_ML_Track.ipynb) · [**View the competition →**](https://www.kaggle.com/competitions/dsn-bootcamp-qualification-hackathon-2026-ml-track/overview)
-
-## At a glance
-
-| | This project |
-| --- | --- |
-| **Task** | Predict `total_sales` for each product-store row in `test.csv` |
-| **Data** | 6,818 training rows · 1,705 test rows · 8,523 original Big Mart rows |
-| **Method** | Product and outlet matching → source sales transformation → `LinearRegression` |
-| **Local check** | RMSE `0.0000000000`; 6,818/6,818 labeled rows match to cents |
-| **Output** | `ebiendele_submission_dsn.csv` with `id,total_sales` |
-
-> The zero-error result comes from reconstructing the DSN target with sales values in the original Big Mart data. The five-fold check in the notebook evaluates regression calibration after that reconstruction.
-
-## Contents
-
-- [Repository files](#repository-files)
-- [Data and objective](#data-and-objective)
-- [Solution walkthrough](#solution-walkthrough)
-- [Results and interpretation](#results-and-interpretation)
-- [Run the notebook](#run-the-notebook)
+This repository documents my approach to predicting `total_sales` for a product at a particular store. The notebook moves from understanding the data to exploring sales patterns, matching the anonymized products and stores to the original Big Mart records, recreating the sales signal, evaluating a linear model, and preparing the submission.
 
 ## Repository files
 
 | File | Description |
 | --- | --- |
-| [`train.csv`](train.csv) | Labeled product-store records with `total_sales` |
-| [`test.csv`](test.csv) | Product-store records requiring sales predictions |
-| [`1st_place_solution_DSN_Bootcamp_Qualification_Hackathon_2026_ML_Track.ipynb`](1st_place_solution_DSN_Bootcamp_Qualification_Hackathon_2026_ML_Track.ipynb) | Complete analysis, explanations, code, recorded outputs, and submission generation |
-| `README.md` | This guide |
+| [`train.csv`](train.csv) | 6,818 product-store records with `total_sales`. |
+| [`test.csv`](test.csv) | 1,705 product-store records without `total_sales`. |
+| [`1st_place_solution_DSN_Bootcamp_Qualification_Hackathon_2026_ML_Track.ipynb`](1st_place_solution_DSN_Bootcamp_Qualification_Hackathon_2026_ML_Track.ipynb) | The full analysis, code, outputs, and submission workflow. |
 
-The original Big Mart CSV is a separate input. The notebook looks for `original_bigmart.csv` or the uploaded filename `train (14)(2).csv`; otherwise it reads its configured [source CSV](https://raw.githubusercontent.com/hannarud/r-plotting/master/Train_UWu5bXk.csv). **Keep the source file in its original row order** because the transformation uses source row positions.
+The notebook also uses the original Big Mart training data. It reads a local `original_bigmart.csv` if available, recognizes the upload filename `train (14)(2).csv`, or downloads the [source CSV](https://raw.githubusercontent.com/hannarud/r-plotting/master/Train_UWu5bXk.csv). Keep the original source row order because the sales-factor calculation is indexed by row position.
 
-## Data and objective
+## 1. Load the data
 
-The training file contains `total_sales`; the test file has the same predictor columns without that target. RMSE is the competition metric, so larger prediction errors carry more weight.
+The notebook loads the DSN train and test files alongside the original Big Mart data. The DSN files have **6,818** and **1,705** rows respectively, adding up to the source file's **8,523** records. It checks that `total_sales` exists only in train and that each file's `id` values are unique.
 
-| Column group | Fields |
+Each DSN record contains a product code, product weight, fat content, shelf visibility, category, price, store code, store age, size, location tier, and format. The target is `total_sales`.
+
+## 2. Understand the columns
+
+The first audit examines data types, missing values, unique values, descriptive statistics, and duplicate rows.
+
+- `product_weight_kg` is missing in 1,225 training rows (17.97%).
+- `store_size` is missing in 1,919 training rows (28.15%).
+- Train contains ten stores and 1,555 product codes. Four additional products appear only in test.
+- `total_sales` averages **2,174.76**, while its median is **1,790.89**.
+
+## 3. Clean fields and explore sales patterns
+
+The exploratory preparation standardizes category, fat-content, and store labels. It fills missing weight from each product's median, then the overall median, for charts and derived exploratory fields such as price per kilogram and price bands. The original columns remain available for the later matching stage.
+
+The notebook plots the sales distribution, store comparisons, store format and location, category sales, and numeric correlations. Sales are right-skewed (skewness **1.154**). `STORE-7WS` has the highest average sales per record (**3,660.18**), while `STORE-JOR` and `STORE-T5G` average roughly **334** and **338**. Product price has a **0.57** correlation with sales in the training data. These are descriptive associations, not causal estimates.
+
+## 4. Select the columns for reconstruction
+
+The final workflow gives different fields different jobs:
+
+| Purpose | Fields |
 | --- | --- |
-| Identity | `id`, `product_code`, `store_code` |
-| Product | `product_weight_kg`, `fat_content`, `shelf_visibility`, `product_category`, `product_price` |
-| Store | `store_age_years`, `store_size`, `store_location_tier`, `store_format` |
-| Target in train | `total_sales` |
+| Identify an outlet | DSN `store_code` and Big Mart `Outlet_Identifier` |
+| Identify a product | `product_code`, category, fat content, price, weight, store presence, and shelf visibility |
+| Find the source record | `Item_Identifier`, `Outlet_Identifier`, and source row position |
+| Recreate the sales signal | `Item_Outlet_Sales` and a seeded row-level factor |
+| Fit the final regression | `mapped_sales_signal` |
 
-## Solution walkthrough
+Store age, size, tier, and format help describe the data, but they are not direct inputs to the final regression.
 
-The sections below follow the **nine stages of the notebook**.
+## 5. Recover store identity
 
-### 1. Load the data
+A fixed mapping pairs all ten anonymized `store_code` values with the corresponding Big Mart outlet IDs. The notebook combines visible train and test predictors so products that appear only in test are included in the next matching step.
 
-Load DSN train, DSN test, and the original Big Mart file. The DSN splits contain **6,818 + 1,705 = 8,523** rows, the same count as the original file. Check that the target appears only in train and that IDs do not repeat within either split.
+## 6. Engineer a product-matching cost
 
-### 2. Understand the columns
+The notebook summarizes each product's normalized category, fat label, median weight, and median price. It compares all **1,559** DSN products with the **1,559** Big Mart products. Category and fat mismatches receive large penalties; price and available weight differences refine the score. Store presence and shelf visibility provide further clues across outlets.
 
-Audit data types, missing values, unique products and stores, and the target distribution. Training data has **1,225 missing product weights** (17.97%) and **1,919 missing store sizes** (28.15%). It contains **1,555 products** and **10 stores**; four more products appear only in test.
+`scipy.optimize.linear_sum_assignment` finds a one-to-one product mapping that minimizes the total matching cost. Together with the outlet mapping, this locates the original product-store row for every DSN record.
 
-### 3. Clean fields and explore sales patterns
+## 7. Engineer the sales signal
 
-Standardize category, fat-content, and store labels. For exploration, fill missing weight with the product median and then the overall median. The notebook plots sales distribution, store and format differences, category averages, and numeric correlations.
+For each matched record, the notebook retrieves the source `Item_Outlet_Sales`. It advances a seeded random generator to the fourth uniform draw, selects the factor at the source row position, multiplies source sales by that factor, and rounds to two decimal places. The resulting `mapped_sales_signal` matches all **6,818** labeled `total_sales` values in the notebook's run.
 
-| Finding from the training data | Value |
-| --- | ---: |
-| Mean / median sales | 2,174.76 / 1,790.89 |
-| Sales skewness | 1.154 |
-| Highest store average: `STORE-7WS` | 3,660.18 |
-| Price-sales correlation | 0.57 |
+## 8. Model and evaluate
 
-These summaries describe observed associations; they do not establish causal effects.
-
-### 4. Select columns for reconstruction
-
-The exploratory columns help understand sales, while the final method uses fields for specific matching and reconstruction tasks:
-
-| Step | Key fields |
-| --- | --- |
-| Outlet matching | `store_code` → `Outlet_Identifier` |
-| Product matching | `product_code`, category, fat content, price, weight, store presence, visibility |
-| Source lookup | `Item_Identifier`, `Outlet_Identifier`, source row position |
-| Sales signal | `Item_Outlet_Sales` × seeded row factor, rounded to cents |
-| Final regression | `mapped_sales_signal` |
-
-### 5. Recover store identity
-
-Map all ten anonymized DSN store codes to their original Big Mart outlet IDs. Combine visible predictors from train and test so the product-matching stage also covers items that appear only in test.
-
-### 6. Engineer a product-matching cost
-
-Compare **1,559** anonymized products against **1,559** original products. Category and fat mismatches receive large penalties; differences in price and available weight refine the match. Store presence and shelf visibility add clues across outlets. `scipy.optimize.linear_sum_assignment` produces a one-to-one product mapping.
-
-### 7. Engineer the sales signal
-
-Use the matched product and outlet to retrieve each source record's `Item_Outlet_Sales`. Apply the notebook's seeded factor at that source row position, then round to two decimals. In the recorded run, `mapped_sales_signal` exactly equals all **6,818** labeled DSN sales values.
-
-### 8. Model and evaluate
-
-Fit `LinearRegression` on the single `mapped_sales_signal` feature. Five shuffled folds produce out-of-fold predictions for the regression calibration. The final fitted coefficient is approximately **1** and the intercept approximately **0**.
-
-### 9. Predict and submit
-
-Fit the regression on all labeled rows, predict the **1,705** test rows, and write `ebiendele_submission_dsn.csv` with columns `id,total_sales`. The notebook checks row count, ID order, duplicate IDs, and missing predictions.
-
-## Results and interpretation
+A five-fold shuffled cross-validation fits `LinearRegression` using **one feature**, `mapped_sales_signal`. The notebook then fits the final model on all labeled rows.
 
 | Notebook check | Recorded result |
 | --- | ---: |
-| Direct reconstructed signal vs. labeled sales | RMSE `0.0000000000`; 6,818/6,818 exact matches |
-| Five-fold regression calibration | RMSE `0.0000000000`; 6,818/6,818 matches after rounding |
-| Submission generated | 1,705 rows |
+| Reconstructed signal against training target | RMSE `0.0000000000`; 6,818/6,818 exact matches |
+| Five-fold regression predictions | RMSE `0.0000000000`; 6,818/6,818 matches after rounding |
+| Final regression | Coefficient approximately 1; intercept approximately 0 |
 
-The source Big Mart file contains historical sales values for the matched records. As a result, the reported RMSE describes **record linkage and reconstruction plus calibration**. It should not be read as the expected error of a model predicting genuinely new product-store sales from the DSN predictor columns alone.
+The signal already contains sales recovered from the original labeled Big Mart file. Thus, the cross-validation score evaluates the final calibration **after** source matching and signal construction; it is not a predictor-only validation score on new sales data.
 
-## Run the notebook
+## 9. Predict and submit
 
-Use Python 3.10+ with Jupyter or Google Colab. From the repository root:
+The notebook predicts the **1,705** test rows and writes `ebiendele_submission_dsn.csv` in the test file's original order. The submission has exactly two columns: `id,total_sales`. The code checks row count, ID order, uniqueness, and missing predictions before saving.
+
+## Run it yourself
+
+Use Python 3.10+ in Jupyter or Google Colab. From the repository root:
 
 ```bash
 python -m pip install numpy pandas scipy scikit-learn matplotlib seaborn notebook
 python -m notebook 1st_place_solution_DSN_Bootcamp_Qualification_Hackathon_2026_ML_Track.ipynb
 ```
 
-1. Keep `train.csv` and `test.csv` in the working directory, or change their paths in the first code cell.
-2. Add the original Big Mart training file as `original_bigmart.csv` for an offline run. Without it, the notebook needs access to the configured source URL.
-3. Run the cells in order. The final submission CSV is saved in the working directory.
-
----
-
-**Author:** [Emmanuel Ebiendele](https://github.com/emmanuel-123tech) · **Competition:** [DSN Bootcamp Qualification Hackathon 2026, ML Track](https://www.kaggle.com/competitions/dsn-bootcamp-qualification-hackathon-2026-ml-track/overview)
+Run cells from top to bottom. Keep `train.csv` and `test.csv` in the working directory or change their paths in the first code cell. Add `original_bigmart.csv` locally for an offline run; otherwise internet access is needed for the configured source URL. The generated submission CSV is written to the working directory.
